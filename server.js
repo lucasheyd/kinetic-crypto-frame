@@ -32,8 +32,11 @@ async function askCrestaAI(prompt) {
   try {
     console.log('🤖 Chamando Crestal AI...');
     
+    // Usar a URL correta da Crestal
+    const apiUrl = process.env.CRESTAL_API_URL_CHATS || 'https://open.service.crestal.network/v1/chat/completions';
+    
     const response = await axios.post(
-      'https://open.service.crestal.network/v1/chat/completions',
+      apiUrl,
       {
         model: "gpt-4",
         messages: [
