@@ -1,4 +1,4 @@
-// server.js - Kinetic Crypto com Cache e Limites
+// server.js - Kinetic Crypto with Cache and Limits (Complete)
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
@@ -8,20 +8,20 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Stats e Cache
+// Stats and Cache
 let stats = { interactions: 0, users: new Set(), questions: [] };
-let userQuestionCount = new Map(); // Limite de perguntas por usuário
+let userQuestionCount = new Map(); // User question limits
 let cache = {
-  market: { data: null, timestamp: 0, duration: 10 * 60 * 1000 }, // 10 minutos
-  news: { data: null, timestamp: 0, duration: 15 * 60 * 1000 },   // 15 minutos
-  tips: { data: null, timestamp: 0, duration: 30 * 60 * 1000 }    // 30 minutos
+  market: { data: null, timestamp: 0, duration: 10 * 60 * 1000 }, // 10 minutes
+  news: { data: null, timestamp: 0, duration: 15 * 60 * 1000 },   // 15 minutes
+  tips: { data: null, timestamp: 0, duration: 30 * 60 * 1000 }    // 30 minutes
 };
 
-// Limite de perguntas por usuário
+// Question limits
 const QUESTION_LIMIT = 3;
-const QUESTION_RESET_TIME = 24 * 60 * 60 * 1000; // 24 horas
+const QUESTION_RESET_TIME = 24 * 60 * 60 * 1000; // 24 hours
 
-// Função para gerar imagem simples
+// Simple image URL generator
 function createImageUrl(text, bgColor = '1a1a2e') {
   const cleanText = text
     .replace(/[^\w\s-.,!?]/g, '') 
@@ -32,7 +32,7 @@ function createImageUrl(text, bgColor = '1a1a2e') {
   return `https://fakeimg.pl/1200x630/${bgColor}/ffffff/?text=${encoded}&font=bebas`;
 }
 
-// Verificar se dados do cache ainda são válidos
+// Check if cache is valid
 function isCacheValid(cacheKey) {
   const cacheData = cache[cacheKey];
   if (!cacheData.data) return false;
@@ -41,14 +41,14 @@ function isCacheValid(cacheKey) {
   return (now - cacheData.timestamp) < cacheData.duration;
 }
 
-// Obter dados do cache ou gerar novos
+// Get cached data or generate new
 async function getCachedData(cacheKey, prompt) {
   if (isCacheValid(cacheKey)) {
-    console.log(`📦 Usando cache para ${cacheKey}`);
+    console.log(`📦 Using cache for ${cacheKey}`);
     return cache[cacheKey].data;
   }
   
-  console.log(`🔄 Atualizando cache para ${cacheKey}`);
+  console.log(`🔄 Updating cache for ${cacheKey}`);
   const newData = await askCrestaAI(prompt);
   
   cache[cacheKey] = {
@@ -60,12 +60,12 @@ async function getCachedData(cacheKey, prompt) {
   return newData;
 }
 
-// Verificar limite de perguntas do usuário
+// Check user question limit
 function canUserAsk(fid) {
   const now = Date.now();
   const userQuestions = userQuestionCount.get(fid) || { count: 0, resetTime: now + QUESTION_RESET_TIME };
   
-  // Reset se passou 24 horas
+  // Reset after 24 hours
   if (now > userQuestions.resetTime) {
     userQuestions.count = 0;
     userQuestions.resetTime = now + QUESTION_RESET_TIME;
@@ -74,7 +74,7 @@ function canUserAsk(fid) {
   return userQuestions.count < QUESTION_LIMIT;
 }
 
-// Incrementar contador de perguntas
+// Increment user question count
 function incrementUserQuestions(fid) {
   const now = Date.now();
   const userQuestions = userQuestionCount.get(fid) || { count: 0, resetTime: now + QUESTION_RESET_TIME };
@@ -82,17 +82,17 @@ function incrementUserQuestions(fid) {
   userQuestions.count++;
   userQuestionCount.set(fid, userQuestions);
   
-  return QUESTION_LIMIT - userQuestions.count; // Perguntas restantes
+  return QUESTION_LIMIT - userQuestions.count; // Remaining questions
 }
 
-// Função para chamar Crestal AI com timeout mais curto
+// Call Crestal AI with timeout
 async function askCrestaAI(prompt) {
   if (!process.env.CRESTAL_API_KEY || process.env.CRESTAL_API_KEY === 'your_crestal_api_key_here') {
-    return "AI indisponível. Configure a chave Crestal API.";
+    return "AI unavailable. Configure Crestal API key.";
   }
 
   try {
-    console.log('🤖 Chamando Crestal AI...');
+    console.log('🤖 Calling Crestal AI...');
     
     const apiUrl = process.env.CRESTAL_API_URL_CHATS || 'https://open.service.crestal.network/v1/chat/completions';
     
@@ -115,31 +115,31 @@ async function askCrestaAI(prompt) {
           'Authorization': `Bearer ${process.env.CRESTAL_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        timeout: 8000 // 8 segundos - mais rápido
+        timeout: 8000 // 8 seconds
       }
     );
 
     const aiResponse = response.data.choices[0].message.content;
-    console.log('✅ AI resposta:', aiResponse);
+    console.log('✅ AI response:', aiResponse);
     return aiResponse;
     
   } catch (error) {
-    console.error('❌ Erro Crestal AI:', error.response?.data || error.message);
+    console.error('❌ Crestal AI error:', error.response?.data || error.message);
     
     if (error.code === 'ECONNABORTED') {
-      return "AI demorou para responder. Dados em cache disponíveis.";
+      return "AI took too long to respond. Cached data available.";
     }
     
-    return "AI temporariamente indisponível. Tente novamente!";
+    return "AI temporarily unavailable. Try again!";
   }
 }
 
-// Página principal
+// Main page
 app.get('/', (req, res) => {
   const baseUrl = process.env.BASE_URL || 'https://kinetic-warpcast-ai.vercel.app';
   
   const html = `<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -218,28 +218,28 @@ app.get('/', (req, res) => {
   res.send(html);
 });
 
-// Handler de interações do frame - OTIMIZADO
+// Frame interaction handler - OPTIMIZED
 app.post('/api/frame', async (req, res) => {
   try {
-    console.log('🎯 Interação do frame recebida');
+    console.log('🎯 Frame interaction received');
     
-    // Parse dos dados do frame
+    // Parse frame data
     const frameData = req.body.untrustedData || req.body;
     const buttonIndex = parseInt(frameData.buttonIndex) || 1;
     const fid = frameData.fid || 'anon';
     const inputText = (frameData.inputText || '').trim();
     
-    // Atualizar stats
+    // Update stats
     stats.interactions++;
     stats.users.add(fid);
     
-    console.log(`Botão: ${buttonIndex}, Usuário: ${fid}, Input: "${inputText}"`);
+    console.log(`Button: ${buttonIndex}, User: ${fid}, Input: "${inputText}"`);
     
     const baseUrl = process.env.BASE_URL || 'https://kinetic-warpcast-ai.vercel.app';
     let aiResponse = '';
     let buttons = [];
     
-    // Processar pergunta do usuário - COM LIMITE
+    // Process user question - WITH LIMIT
     if (inputText && inputText.length > 0) {
       console.log('📝 Processing user question');
       
@@ -250,7 +250,7 @@ app.post('/api/frame', async (req, res) => {
         const remaining = incrementUserQuestions(fid);
         stats.questions.push({ question: inputText, fid, timestamp: new Date() });
         
-        // Chamada direta para pergunta (sem cache)
+        // Direct call for question (no cache)
         aiResponse = await askCrestaAI(`User asked about crypto: "${inputText}". Provide helpful and direct analysis.`);
         aiResponse += ` (${remaining} questions left today)`;
         
@@ -258,7 +258,7 @@ app.post('/api/frame', async (req, res) => {
       }
       
     } else {
-      // Processar cliques nos botões - COM CACHE
+      // Process button clicks - WITH CACHE
       switch (buttonIndex) {
         case 1: // Market Analysis - CACHE 10min
           console.log('📊 Market analysis (cached)');
@@ -298,14 +298,14 @@ app.post('/api/frame', async (req, res) => {
       }
     }
     
-    // Gerar HTML da resposta
+    // Generate response HTML
     const imageUrl = createImageUrl(aiResponse);
     
     const buttonTags = buttons.map((btn, i) => 
       `    <meta property="fc:frame:button:${i + 1}" content="${btn}" />`
     ).join('\n');
     
-    // Input apenas no modo "Ask AI"
+    // Input only in "Ask AI" mode
     const inputTag = (buttonIndex === 4 && !inputText) ? 
       '    <meta property="fc:frame:input:text" content="Ask about crypto trends, DeFi, trading..." />' : '';
     
@@ -316,4 +316,96 @@ app.post('/api/frame', async (req, res) => {
     <meta property="fc:frame" content="vNext" />
     <meta property="fc:frame:image" content="${imageUrl}" />
     <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
-    <meta property="
+    <meta property="fc:frame:post_url" content="${baseUrl}/api/frame" />
+${buttonTags}
+${inputTag}
+    <title>Kinetic Crypto AI</title>
+</head>
+<body>
+    <h1>AI Response</h1>
+    <p>Interaction #${stats.interactions}</p>
+    <p>User: ${fid}</p>
+    <p>AI Response: ${aiResponse}</p>
+    ${inputText ? `<p>Question: "${inputText}"</p>` : ''}
+</body>
+</html>`;
+
+    console.log('✅ Sending frame response');
+    
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.status(200).send(responseHtml);
+    
+  } catch (error) {
+    console.error('❌ Frame error:', error);
+    
+    const baseUrl = process.env.BASE_URL || 'https://kinetic-warpcast-ai.vercel.app';
+    const errorHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta property="fc:frame" content="vNext" />
+    <meta property="fc:frame:image" content="${createImageUrl('Error occurred! Please try again.')}" />
+    <meta property="fc:frame:button:1" content="🔄 Try Again" />
+    <meta property="fc:frame:button:2" content="🏠 Main Menu" />
+    <meta property="fc:frame:post_url" content="${baseUrl}/api/frame" />
+</head>
+<body><p>Error: ${error.message}</p></body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.status(200).send(errorHtml);
+  }
+});
+
+// Health and debug endpoints
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'healthy',
+    interactions: stats.interactions,
+    users: stats.users.size,
+    questions: stats.questions.length,
+    ai_ready: !!(process.env.CRESTAL_API_KEY && process.env.CRESTAL_API_KEY !== 'your_crestal_api_key_here'),
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/debug', (req, res) => {
+  res.json({
+    environment: process.env.NODE_ENV,
+    baseUrl: process.env.BASE_URL,
+    hasCrestaKey: !!(process.env.CRESTAL_API_KEY && process.env.CRESTAL_API_KEY !== 'your_crestal_api_key_here'),
+    stats: {
+      interactions: stats.interactions,
+      users: stats.users.size,
+      questions: stats.questions.length,
+      recentQuestions: stats.questions.slice(-3)
+    },
+    cache: {
+      market: { valid: isCacheValid('market'), age: cache.market.timestamp ? Date.now() - cache.market.timestamp : 0 },
+      news: { valid: isCacheValid('news'), age: cache.news.timestamp ? Date.now() - cache.news.timestamp : 0 },
+      tips: { valid: isCacheValid('tips'), age: cache.tips.timestamp ? Date.now() - cache.tips.timestamp : 0 }
+    }
+  });
+});
+
+// Test AI endpoint
+app.get('/test-ai', async (req, res) => {
+  try {
+    const testResponse = await askCrestaAI("Test connection to Crestal AI. Respond 'OK' if working.");
+    res.json({ 
+      status: 'success', 
+      ai_response: testResponse,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.json({ 
+      status: 'error', 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Export for Vercel
+module.exports = app;
