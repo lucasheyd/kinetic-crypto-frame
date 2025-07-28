@@ -24,46 +24,41 @@ function createImageUrl(text, bgColor = '1a1a2e') {
 
 // Call Crestal AI (simplified for debugging)
 async function askCrestaAI(prompt) {
-  if (!process.env.CRESTAL_API_KEY || process.env.CRESTAL_API_KEY === 'your_crestal_api_key_here') {
-    return "🤖 AI ready! Configure Crestal API key for live responses.";
-  }
+  const fallback = "🤖 AI is thinking... Please refresh to get full response.";
 
-  try {
-    console.log('🤖 Calling Crestal AI with prompt:', prompt.substring(0, 50) + '…');
-
-    const apiUrl = process.env.CRESTAL_API_URL_CHATS || 'https://open.service.crestal.network/v1/chat/completions';
-
-    const response = await axios.post(
-      apiUrl,
-      {
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: "You are Kinetic Crypto AI. Respond in English, maximum 150 characters. Be helpful. Include 'DYOR' for trading advice."
-          },
-          { role: "user", content: prompt }
-        ],
-        max_tokens: 80,
-        temperature: 0.7
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.CRESTAL_API_KEY}`,
-          'Content-Type': 'application/json'
+  const apiCall = axios.post(
+    process.env.CRESTAL_API_URL_CHATS || 'https://open.service.crestal.network/v1/chat/completions',
+    {
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "You are Kinetic Crypto AI. Respond in English, max 150 characters. Include 'DYOR'."
         },
-        timeout: 10000
-      }
-    );
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 80,
+      temperature: 0.7
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.CRESTAL_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 10000
+    }
+  ).then(res => res.data.choices[0].message.content)
+   .catch(err => {
+     console.error('❌ Error calling Crestal AI:', err.message);
+     return fallback;
+   });
 
-    const aiResponse = response.data.choices[0].message.content;
-    console.log('✅ AI response received:', aiResponse.substring(0, 50) + '...');
-    return aiResponse;
+  // Espera no máximo 4 segundos
+  const timeout = new Promise(resolve =>
+    setTimeout(() => resolve(fallback), 4000)
+  );
 
-  } catch (error) {
-    console.error('❌ Crestal AI error:', error.response?.data || error.message);
-    return "🤖 AI temporarily unavailable. Market data coming soon! DYOR always.";
-  }
+  return await Promise.race([apiCall, timeout]);
 }
 
 // Main page
