@@ -25,7 +25,7 @@ return `https://fakeimg.pl/1200x630/${bgColor}/ffffff/?text=${encoded}&font=beba
 // Call Crestal AI (simplified for debugging)
 async function askCrestaAI(prompt) {
 if (!process.env.CRESTAL_API_KEY || process.env.CRESTAL_API_KEY === 'your_crestal_api_key_here') {
-return “🤖 AI ready! Configure Crestal API key for live responses.”;
+return "🤖 AI ready! Configure Crestal API key for live responses.";
 }
 
 try {
@@ -64,7 +64,7 @@ return aiResponse;
 
 } catch (error) {
 console.error('❌ Crestal AI error:', error.response?.data || error.message);
-return “🤖 AI temporarily unavailable. Market data coming soon! DYOR always.”;
+return "🤖 AI temporarily unavailable. Market data coming soon! DYOR always.";
 }
 }
 
@@ -343,7 +343,7 @@ timestamp: new Date().toISOString()
 // Test AI endpoint
 app.get('/test-ai', async (req, res) => {
 try {
-const response = await askCrestaAI(“Test: Respond with current Bitcoin price and market sentiment.”);
+const response = await askCrestaAI("Test: Respond with current Bitcoin price and market sentiment.");
 res.json({
 status: 'success',
 ai_response: response,
