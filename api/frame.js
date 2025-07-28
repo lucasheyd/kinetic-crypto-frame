@@ -1,14 +1,12 @@
 export default async function handler(req, res) {
   if (req.method === 'GET') {
-    // ✅ Teste de resposta simples no navegador
-    return res.status(200).send("<h1>Kinetic AI Frame is online</h1>");
+    // Para teste manual no navegador
+    return res.status(200).send('<h1>✅ Frame endpoint ativo</h1>');
   }
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
-  console.log('Frame request:', req.body);
 
   const data = req.body.untrustedData || req.body;
   const buttonIndex = parseInt(data.buttonIndex) || 1;
@@ -51,7 +49,7 @@ export default async function handler(req, res) {
 
       aiResponse = response.data.choices[0].message.content;
     } catch (error) {
-      console.error('Crestal API error:', error?.response?.data || error.message);
+      console.error('Erro ao chamar a Crestal:', error?.response?.data || error.message);
       aiResponse = "🤖 AI temporarily unavailable. Try again!";
     }
   }
