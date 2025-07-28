@@ -1,4 +1,4 @@
-// server.js - Kinetic Crypto com Crestal AI
+// server.js - Kinetic Crypto com Cache e Limites
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
@@ -8,12 +8,21 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Stats
+// Stats e Cache
 let stats = { interactions: 0, users: new Set(), questions: [] };
+let userQuestionCount = new Map(); // Limite de perguntas por usuário
+let cache = {
+  market: { data: null, timestamp: 0, duration: 10 * 60 * 1000 }, // 10 minutos
+  news: { data: null, timestamp: 0, duration: 15 * 60 * 1000 },   // 15 minutos
+  tips: { data: null, timestamp: 0, duration: 30 * 60 * 1000 }    // 30 minutos
+};
 
-// Função para gerar imagem simples sem emojis
+// Limite de perguntas por usuário
+const QUESTION_LIMIT = 3;
+const QUESTION_RESET_TIME = 24 * 60 * 60 * 1000; // 24 horas
+
+// Função para gerar imagem simples
 function createImageUrl(text, bgColor = '1a1a2e') {
-  // Remove emojis e caracteres especiais
   const cleanText = text
     .replace(/[^\w\s-.,!?]/g, '') 
     .substring(0, 100)
@@ -23,7 +32,60 @@ function createImageUrl(text, bgColor = '1a1a2e') {
   return `https://fakeimg.pl/1200x630/${bgColor}/ffffff/?text=${encoded}&font=bebas`;
 }
 
-// Função para chamar Crestal AI
+// Verificar se dados do cache ainda são válidos
+function isCacheValid(cacheKey) {
+  const cacheData = cache[cacheKey];
+  if (!cacheData.data) return false;
+  
+  const now = Date.now();
+  return (now - cacheData.timestamp) < cacheData.duration;
+}
+
+// Obter dados do cache ou gerar novos
+async function getCachedData(cacheKey, prompt) {
+  if (isCacheValid(cacheKey)) {
+    console.log(`📦 Usando cache para ${cacheKey}`);
+    return cache[cacheKey].data;
+  }
+  
+  console.log(`🔄 Atualizando cache para ${cacheKey}`);
+  const newData = await askCrestaAI(prompt);
+  
+  cache[cacheKey] = {
+    data: newData,
+    timestamp: Date.now(),
+    duration: cache[cacheKey].duration
+  };
+  
+  return newData;
+}
+
+// Verificar limite de perguntas do usuário
+function canUserAsk(fid) {
+  const now = Date.now();
+  const userQuestions = userQuestionCount.get(fid) || { count: 0, resetTime: now + QUESTION_RESET_TIME };
+  
+  // Reset se passou 24 horas
+  if (now > userQuestions.resetTime) {
+    userQuestions.count = 0;
+    userQuestions.resetTime = now + QUESTION_RESET_TIME;
+  }
+  
+  return userQuestions.count < QUESTION_LIMIT;
+}
+
+// Incrementar contador de perguntas
+function incrementUserQuestions(fid) {
+  const now = Date.now();
+  const userQuestions = userQuestionCount.get(fid) || { count: 0, resetTime: now + QUESTION_RESET_TIME };
+  
+  userQuestions.count++;
+  userQuestionCount.set(fid, userQuestions);
+  
+  return QUESTION_LIMIT - userQuestions.count; // Perguntas restantes
+}
+
+// Função para chamar Crestal AI com timeout mais curto
 async function askCrestaAI(prompt) {
   if (!process.env.CRESTAL_API_KEY || process.env.CRESTAL_API_KEY === 'your_crestal_api_key_here') {
     return "AI indisponível. Configure a chave Crestal API.";
@@ -32,7 +94,6 @@ async function askCrestaAI(prompt) {
   try {
     console.log('🤖 Chamando Crestal AI...');
     
-    // Usar a URL correta da Crestal
     const apiUrl = process.env.CRESTAL_API_URL_CHATS || 'https://open.service.crestal.network/v1/chat/completions';
     
     const response = await axios.post(
@@ -42,11 +103,11 @@ async function askCrestaAI(prompt) {
         messages: [
           {
             role: "system",
-            content: "Você é Kinetic Crypto AI. Responda em português, máximo 200 caracteres. Seja útil e profissional. Sempre inclua 'DYOR' para conselhos de trading."
+            content: "You are Kinetic Crypto AI. Respond in English, maximum 180 characters. Be direct and helpful. For trading advice, always include 'DYOR'."
           },
           { role: "user", content: prompt }
         ],
-        max_tokens: 120,
+        max_tokens: 100,
         temperature: 0.7
       },
       {
@@ -54,7 +115,7 @@ async function askCrestaAI(prompt) {
           'Authorization': `Bearer ${process.env.CRESTAL_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        timeout: 15000
+        timeout: 8000 // 8 segundos - mais rápido
       }
     );
 
@@ -64,6 +125,11 @@ async function askCrestaAI(prompt) {
     
   } catch (error) {
     console.error('❌ Erro Crestal AI:', error.response?.data || error.message);
+    
+    if (error.code === 'ECONNABORTED') {
+      return "AI demorou para responder. Dados em cache disponíveis.";
+    }
+    
     return "AI temporariamente indisponível. Tente novamente!";
   }
 }
@@ -81,12 +147,12 @@ app.get('/', (req, res) => {
     
     <!-- Frame Meta Tags -->
     <meta property="fc:frame" content="vNext" />
-    <meta property="fc:frame:image" content="${createImageUrl('Kinetic Crypto AI - Analise de criptomoedas com IA')}" />
+    <meta property="fc:frame:image" content="${createImageUrl('Kinetic Crypto AI - Your AI Crypto Analysis Assistant')}" />
     <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
-    <meta property="fc:frame:button:1" content="📊 Análise Mercado" />
-    <meta property="fc:frame:button:2" content="🚨 Notícias" />
-    <meta property="fc:frame:button:3" content="💡 Dicas Trading" />
-    <meta property="fc:frame:button:4" content="🎯 Perguntar IA" />
+    <meta property="fc:frame:button:1" content="📊 Market Analysis" />
+    <meta property="fc:frame:button:2" content="🚨 Crypto News" />
+    <meta property="fc:frame:button:3" content="💡 Trading Tips" />
+    <meta property="fc:frame:button:4" content="🎯 Ask AI" />
     <meta property="fc:frame:post_url" content="${baseUrl}/api/frame" />
     
     <style>
@@ -112,25 +178,39 @@ app.get('/', (req, res) => {
             border-radius: 10px;
             margin: 20px 0;
         }
+        .cache-info {
+            background: rgba(0,100,255,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
     <h1>⚡ Kinetic Crypto AI</h1>
-    <p>Análise de criptomoedas com IA da Crestal Network</p>
+    <p>AI-powered crypto analysis using Crestal Network</p>
     
     <div class="status">
-        <strong>🟢 Status: ${process.env.CRESTAL_API_KEY && process.env.CRESTAL_API_KEY !== 'your_crestal_api_key_here' ? 'IA ATIVA' : 'Configure API Key'}</strong><br>
-        Frame pronto para interações no Warpcast!
+        <strong>🟢 Status: ${process.env.CRESTAL_API_KEY && process.env.CRESTAL_API_KEY !== 'your_crestal_api_key_here' ? 'AI ACTIVE' : 'Configure API Key'}</strong><br>
+        Frame optimized with cache and limits!
     </div>
     
     <div class="stats">
-        <h3>📊 Estatísticas</h3>
-        <p>Interações: ${stats.interactions}</p>
-        <p>Usuários: ${stats.users.size}</p>
-        <p>Perguntas: ${stats.questions.length}</p>
+        <h3>📊 Statistics</h3>
+        <p>Interactions: ${stats.interactions}</p>
+        <p>Users: ${stats.users.size}</p>
+        <p>Questions: ${stats.questions.length}</p>
     </div>
     
-    <p><strong>Como usar:</strong> Compartilhe esta URL no Warpcast: <code>${baseUrl}</code></p>
+    <div class="cache-info">
+        <h4>🚀 Optimizations</h4>
+        <p>• Cache: Market (10min), News (15min), Tips (30min)</p>
+        <p>• Limit: 3 questions per user/24h</p>
+        <p>• Timeout: 8 seconds for fast responses</p>
+    </div>
+    
+    <p><strong>How to use:</strong> Share on Warpcast: <code>${baseUrl}</code></p>
 </body>
 </html>`;
 
@@ -138,11 +218,10 @@ app.get('/', (req, res) => {
   res.send(html);
 });
 
-// Handler de interações do frame
+// Handler de interações do frame - OTIMIZADO
 app.post('/api/frame', async (req, res) => {
   try {
     console.log('🎯 Interação do frame recebida');
-    console.log('Body:', JSON.stringify(req.body, null, 2));
     
     // Parse dos dados do frame
     const frameData = req.body.untrustedData || req.body;
@@ -160,45 +239,62 @@ app.post('/api/frame', async (req, res) => {
     let aiResponse = '';
     let buttons = [];
     
-    // Processar pergunta do usuário
+    // Processar pergunta do usuário - COM LIMITE
     if (inputText && inputText.length > 0) {
-      console.log('📝 Processando pergunta do usuário');
-      stats.questions.push({ question: inputText, fid, timestamp: new Date() });
+      console.log('📝 Processing user question');
       
-      aiResponse = await askCrestaAI(`Usuário perguntou sobre crypto: "${inputText}". Forneça análise útil.`);
-      buttons = ['🎯 Perguntar Novamente', '📊 Análise Mercado', '💡 Dicas', '🏠 Menu Principal'];
+      if (!canUserAsk(fid)) {
+        aiResponse = "Daily limit of 3 questions reached. Use automated analysis or come back tomorrow!";
+        buttons = ['📊 Market Analysis', '🚨 Crypto News', '💡 Trading Tips', '🏠 Main Menu'];
+      } else {
+        const remaining = incrementUserQuestions(fid);
+        stats.questions.push({ question: inputText, fid, timestamp: new Date() });
+        
+        // Chamada direta para pergunta (sem cache)
+        aiResponse = await askCrestaAI(`User asked about crypto: "${inputText}". Provide helpful and direct analysis.`);
+        aiResponse += ` (${remaining} questions left today)`;
+        
+        buttons = ['🎯 Ask Another', '📊 Market Analysis', '💡 Trading Tips', '🏠 Main Menu'];
+      }
       
     } else {
-      // Processar cliques nos botões
+      // Processar cliques nos botões - COM CACHE
       switch (buttonIndex) {
-        case 1: // Análise do Mercado
-          console.log('📊 Gerando análise do mercado');
-          aiResponse = await askCrestaAI("Forneça análise atual do mercado de criptomoedas com principais insights e tendências.");
-          buttons = ['🔄 Atualizar', '🚨 Notícias', '💡 Dicas', '🏠 Menu Principal'];
+        case 1: // Market Analysis - CACHE 10min
+          console.log('📊 Market analysis (cached)');
+          aiResponse = await getCachedData('market', 
+            "Provide current crypto market analysis with key insights, prices and trends."
+          );
+          buttons = ['🔄 Refresh', '🚨 Crypto News', '💡 Trading Tips', '🏠 Main Menu'];
           break;
           
-        case 2: // Notícias
-          console.log('🚨 Buscando notícias crypto');
-          aiResponse = await askCrestaAI("Quais são as principais notícias de criptomoedas hoje? Resuma os desenvolvimentos mais importantes.");
-          buttons = ['📊 Impacto no Mercado', '🔄 Mais Notícias', '💡 Dicas', '🏠 Menu Principal'];
+        case 2: // Crypto News - CACHE 15min
+          console.log('🚨 Crypto news (cached)');
+          aiResponse = await getCachedData('news',
+            "What are today's top crypto news stories? Summarize the most important developments."
+          );
+          buttons = ['📊 Market Impact', '🔄 More News', '💡 Trading Tips', '🏠 Main Menu'];
           break;
           
-        case 3: // Dicas de Trading
-          console.log('💡 Gerando dicas de trading');
-          aiResponse = await askCrestaAI("Dê dicas práticas de trading de criptomoedas com gestão de risco. Inclua lembrete DYOR.");
-          buttons = ['📊 Análise', '🎯 Perguntar IA', '🔄 Mais Dicas', '🏠 Menu Principal'];
+        case 3: // Trading Tips - CACHE 30min
+          console.log('💡 Trading tips (cached)');
+          aiResponse = await getCachedData('tips',
+            "Give practical crypto trading tips with risk management. Include DYOR reminder."
+          );
+          buttons = ['📊 Market Analysis', '🎯 Ask AI', '🔄 More Tips', '🏠 Main Menu'];
           break;
           
-        case 4: // Perguntar IA
-          console.log('🎯 Modo pergunta ativado');
-          aiResponse = "Faça sua pergunta sobre criptomoedas! Digite abaixo e clique em Enviar.";
-          buttons = ['📤 Enviar Pergunta'];
+        case 4: // Ask AI
+          console.log('🎯 Question mode activated');
+          const remaining = QUESTION_LIMIT - (userQuestionCount.get(fid)?.count || 0);
+          aiResponse = `Ask me anything about crypto! You have ${remaining} questions available today.`;
+          buttons = ['📤 Submit Question'];
           break;
           
-        default: // Menu Principal
-          console.log('🏠 Voltando ao menu principal');
-          aiResponse = "Kinetic Crypto AI - Seu assistente de análise de criptomoedas. Escolha uma opção abaixo!";
-          buttons = ['📊 Análise Mercado', '🚨 Notícias', '💡 Dicas Trading', '🎯 Perguntar IA'];
+        default: // Main Menu
+          console.log('🏠 Back to main menu');
+          aiResponse = "Kinetic Crypto AI - Your crypto analysis assistant. Choose an option below!";
+          buttons = ['📊 Market Analysis', '🚨 Crypto News', '💡 Trading Tips', '🎯 Ask AI'];
       }
     }
     
@@ -209,9 +305,9 @@ app.post('/api/frame', async (req, res) => {
       `    <meta property="fc:frame:button:${i + 1}" content="${btn}" />`
     ).join('\n');
     
-    // Adicionar campo de input apenas no modo "Perguntar IA"
+    // Input apenas no modo "Ask AI"
     const inputTag = (buttonIndex === 4 && !inputText) ? 
-      '    <meta property="fc:frame:input:text" content="Pergunte sobre crypto, DeFi, trading..." />' : '';
+      '    <meta property="fc:frame:input:text" content="Ask about crypto trends, DeFi, trading..." />' : '';
     
     const responseHtml = `<!DOCTYPE html>
 <html>
@@ -220,91 +316,4 @@ app.post('/api/frame', async (req, res) => {
     <meta property="fc:frame" content="vNext" />
     <meta property="fc:frame:image" content="${imageUrl}" />
     <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
-    <meta property="fc:frame:post_url" content="${baseUrl}/api/frame" />
-${buttonTags}
-${inputTag}
-    <title>Kinetic Crypto AI</title>
-</head>
-<body>
-    <h1>Resposta da IA</h1>
-    <p>Interação #${stats.interactions}</p>
-    <p>Usuário: ${fid}</p>
-    <p>Resposta IA: ${aiResponse}</p>
-    ${inputText ? `<p>Pergunta: "${inputText}"</p>` : ''}
-</body>
-</html>`;
-
-    console.log('✅ Enviando resposta do frame');
-    
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.status(200).send(responseHtml);
-    
-  } catch (error) {
-    console.error('❌ Erro no frame:', error);
-    
-    const baseUrl = process.env.BASE_URL || 'https://kinetic-warpcast-ai.vercel.app';
-    const errorHtml = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8" />
-    <meta property="fc:frame" content="vNext" />
-    <meta property="fc:frame:image" content="${createImageUrl('Erro ocorreu! Tente novamente.')}" />
-    <meta property="fc:frame:button:1" content="🔄 Tentar Novamente" />
-    <meta property="fc:frame:button:2" content="🏠 Menu Principal" />
-    <meta property="fc:frame:post_url" content="${baseUrl}/api/frame" />
-</head>
-<body><p>Erro: ${error.message}</p></body>
-</html>`;
-
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.status(200).send(errorHtml);
-  }
-});
-
-// Endpoints de saúde e debug
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy',
-    interactions: stats.interactions,
-    users: stats.users.size,
-    questions: stats.questions.length,
-    ai_ready: !!(process.env.CRESTAL_API_KEY && process.env.CRESTAL_API_KEY !== 'your_crestal_api_key_here'),
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.get('/debug', (req, res) => {
-  res.json({
-    environment: process.env.NODE_ENV,
-    baseUrl: process.env.BASE_URL,
-    hasCrestaKey: !!(process.env.CRESTAL_API_KEY && process.env.CRESTAL_API_KEY !== 'your_crestal_api_key_here'),
-    stats: {
-      interactions: stats.interactions,
-      users: stats.users.size,
-      questions: stats.questions.length,
-      recentQuestions: stats.questions.slice(-3)
-    }
-  });
-});
-
-// Teste da API Crestal
-app.get('/test-ai', async (req, res) => {
-  try {
-    const testResponse = await askCrestaAI("Teste de conexão com Crestal AI. Responda 'OK' se funcionando.");
-    res.json({ 
-      status: 'success', 
-      ai_response: testResponse,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    res.json({ 
-      status: 'error', 
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-// Export para Vercel
-module.exports = app;
+    <meta property="
