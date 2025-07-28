@@ -1,4 +1,4 @@
-// server.js - Sistema de Cache para Economizar CAPs da Crestal
+// server.js - Fixed Ask AI Frame Error
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
@@ -8,32 +8,17 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Stats e Cache Inteligente
+// Stats
 let stats = { interactions: 0, users: new Set(), questions: [], apiCalls: 0, cacheSaves: 0 };
 
-// CACHE SYSTEM - Economiza CAPs!
+// Cache system
 let aiCache = {
-  market: { 
-    data: null, 
-    timestamp: 0, 
-    duration: 15 * 60 * 1000, // 15 minutos - mercado muda pouco
-    hits: 0 
-  },
-  news: { 
-    data: null, 
-    timestamp: 0, 
-    duration: 30 * 60 * 1000, // 30 minutos - notícias ficam válidas mais tempo
-    hits: 0 
-  },
-  tips: { 
-    data: null, 
-    timestamp: 0, 
-    duration: 60 * 60 * 1000, // 1 hora - dicas não mudam muito
-    hits: 0 
-  }
+  market: { data: null, timestamp: 0, duration: 15 * 60 * 1000, hits: 0 },
+  news: { data: null, timestamp: 0, duration: 30 * 60 * 1000, hits: 0 },
+  tips: { data: null, timestamp: 0, duration: 60 * 60 * 1000, hits: 0 }
 };
 
-// Limite de perguntas personalizadas por usuário
+// User question limits
 let userQuestionCount = new Map();
 const DAILY_QUESTION_LIMIT = 3;
 
@@ -48,7 +33,7 @@ function createImageUrl(text, bgColor = '1a1a2e') {
   return `https://fakeimg.pl/1200x630/${bgColor}/ffffff/?text=${encoded}&font=bebas`;
 }
 
-// Verificar se cache é válido
+// Check if cache is valid
 function isCacheValid(cacheKey) {
   const cache = aiCache[cacheKey];
   if (!cache || !cache.data) return false;
@@ -59,13 +44,13 @@ function isCacheValid(cacheKey) {
   if (isValid) {
     cache.hits++;
     stats.cacheSaves++;
-    console.log(`💰 CACHE HIT! Salvou 1 CAP. ${cacheKey} usado ${cache.hits}x`);
+    console.log(`💰 CACHE HIT! Saved 1 CAP. ${cacheKey} used ${cache.hits}x`);
   }
   
   return isValid;
 }
 
-// Verificar limite diário de perguntas
+// Check daily question limit
 function canUserAskQuestion(fid) {
   const today = new Date().toDateString();
   const userKey = `${fid}-${today}`;
@@ -73,7 +58,7 @@ function canUserAskQuestion(fid) {
   return count < DAILY_QUESTION_LIMIT;
 }
 
-// Incrementar contador de perguntas
+// Increment user questions
 function incrementUserQuestions(fid) {
   const today = new Date().toDateString();
   const userKey = `${fid}-${today}`;
@@ -82,19 +67,19 @@ function incrementUserQuestions(fid) {
   return DAILY_QUESTION_LIMIT - (count + 1);
 }
 
-// Call Crestal AI - COM CONTROLE DE CACHE
+// Call Crestal AI with cache control
 async function askCrestaAI(prompt, cacheKey = null) {
-  // Verificar cache primeiro
+  // Check cache first
   if (cacheKey && isCacheValid(cacheKey)) {
     return aiCache[cacheKey].data;
   }
 
   if (!process.env.CRESTAL_API_KEY || process.env.CRESTAL_API_KEY === 'your_crestal_api_key_here') {
-    return "🤖 AI ready! Configure Crestal API key for live responses.";
+    return "AI ready! Configure Crestal API key for live responses.";
   }
 
   try {
-    console.log(`💸 USANDO CAP! Chamando Crestal AI para: ${cacheKey || 'pergunta personalizada'}`);
+    console.log(`💸 USING CAP! Calling Crestal AI for: ${cacheKey || 'custom question'}`);
     stats.apiCalls++;
 
     const apiUrl = process.env.CRESTAL_API_URL_CHATS || 'https://open.service.crestal.network/v1/chat/completions';
@@ -106,7 +91,7 @@ async function askCrestaAI(prompt, cacheKey = null) {
         messages: [
           {
             role: "system",
-            content: "You are Kinetic Crypto AI. Respond in English, maximum 150 characters. Be helpful. Include 'DYOR' for trading advice."
+            content: "You are Kinetic Crypto AI. Respond in English, maximum 150 characters. Be helpful. Include DYOR for trading advice."
           },
           { role: "user", content: prompt }
         ],
@@ -123,28 +108,28 @@ async function askCrestaAI(prompt, cacheKey = null) {
     );
 
     const aiResponse = response.data.choices[0].message.content;
-    console.log(`✅ Resposta recebida (CAP usado): ${aiResponse.substring(0, 50)}...`);
+    console.log(`✅ Response received (CAP used): ${aiResponse.substring(0, 50)}...`);
     
-    // Salvar no cache se for um tipo que deve ser cacheado
+    // Save to cache if it's a cacheable type
     if (cacheKey && aiCache[cacheKey]) {
       aiCache[cacheKey].data = aiResponse;
       aiCache[cacheKey].timestamp = Date.now();
       aiCache[cacheKey].hits = 0;
-      console.log(`💾 Salvo no cache: ${cacheKey} (válido por ${aiCache[cacheKey].duration/60000} min)`);
+      console.log(`💾 Saved to cache: ${cacheKey} (valid for ${aiCache[cacheKey].duration/60000} min)`);
     }
     
     return aiResponse;
 
   } catch (error) {
-    console.error('❌ Erro Crestal AI:', error.response?.data || error.message);
+    console.error('❌ Crestal AI error:', error.response?.data || error.message);
     
-    // Se falhou mas tem cache antigo, usar ele
+    // If failed but has old cache, use it
     if (cacheKey && aiCache[cacheKey] && aiCache[cacheKey].data) {
-      console.log(`♻️ Usando cache antigo para ${cacheKey}`);
+      console.log(`♻️ Using old cache for ${cacheKey}`);
       return aiCache[cacheKey].data + " (cached)";
     }
     
-    return "🤖 AI temporarily unavailable. Market data coming soon! DYOR always.";
+    return "AI temporarily unavailable. Market data coming soon! DYOR always.";
   }
 }
 
@@ -159,7 +144,7 @@ app.get('/', (req, res) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kinetic Crypto AI</title>
   <meta property="fc:frame" content="vNext" />
-  <meta property="fc:frame:image" content="${createImageUrl('⚡ Kinetic Crypto AI - Your AI crypto assistant! Choose an option below.')}" />
+  <meta property="fc:frame:image" content="${createImageUrl('Kinetic Crypto AI - Your AI crypto assistant! Choose an option below.')}" />
   <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
   <meta property="fc:frame:button:1" content="📊 Market Analysis" />
   <meta property="fc:frame:button:2" content="🚨 Crypto News" />
@@ -200,10 +185,11 @@ app.get('/', (req, res) => {
   res.send(html);
 });
 
-// Frame interaction handler - COM CACHE INTELIGENTE
+// Frame interaction handler - FIXED ASK AI
 app.post('/api/frame', async (req, res) => {
   try {
-    console.log('🎯 Frame interaction received');
+    console.log('🎯 === FRAME INTERACTION START ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
     
     // Parse frame data
     const frameData = req.body.untrustedData || req.body.trustedData || req.body;
@@ -215,14 +201,14 @@ app.post('/api/frame', async (req, res) => {
     stats.interactions++;
     stats.users.add(fid);
     
-    console.log(`Button: ${buttonIndex}, User: ${fid}, Input: "${inputText}"`);
+    console.log(`📊 Button: ${buttonIndex}, User: ${fid}, Input: "${inputText}"`);
     
     const baseUrl = process.env.BASE_URL || 'https://kinetic-warpcast-ai.vercel.app';
     let aiResponse = '';
     let buttons = [];
     let showInput = false;
     
-    // Handle user input (perguntas personalizadas - USA CAP)
+    // Handle user input (custom questions - USES CAP)
     if (inputText && inputText.length > 0) {
       console.log('📝 Processing user question');
       
@@ -233,7 +219,7 @@ app.post('/api/frame', async (req, res) => {
         const remaining = incrementUserQuestions(fid);
         stats.questions.push({ question: inputText, fid, timestamp: new Date() });
         
-        // Pergunta personalizada - SEM CACHE (usa CAP)
+        // Custom question - NO CACHE (uses CAP)
         aiResponse = await askCrestaAI(`User asked: "${inputText}". Provide helpful crypto analysis and advice.`);
         aiResponse += ` (${remaining} questions left today)`;
         
@@ -241,7 +227,7 @@ app.post('/api/frame', async (req, res) => {
       }
       
     } else {
-      // Handle button clicks - COM CACHE (economiza CAPs)
+      // Handle button clicks - WITH CACHE (saves CAPs)
       switch (buttonIndex) {
         case 1: // Market Analysis - CACHE 15min
           console.log('📊 Market Analysis (checking cache...)');
@@ -270,34 +256,40 @@ app.post('/api/frame', async (req, res) => {
           buttons = ['📊 Market Analysis', '🎯 Ask AI Question', '🔄 More Tips', '🏠 Main Menu'];
           break;
           
-        case 4: // Ask AI
+        case 4: // Ask AI - FIXED INPUT HANDLING
           console.log('🎯 Ask AI mode activated');
           const questionsLeft = DAILY_QUESTION_LIMIT - (userQuestionCount.get(`${fid}-${new Date().toDateString()}`) || 0);
-          aiResponse = `💬 Ask me anything about crypto! You have ${questionsLeft} personalized questions left today.`;
+          aiResponse = `Ask me anything about crypto! You have ${questionsLeft} personalized questions left today. Type below and click Submit.`;
           buttons = ['📤 Submit Question'];
           showInput = true;
           break;
           
         default: // Main Menu
           console.log('🏠 Main menu requested');
-          aiResponse = "⚡ Kinetic Crypto AI - Your crypto analysis assistant! Choose an option:";
+          aiResponse = "Kinetic Crypto AI - Your crypto analysis assistant! Choose an option:";
           buttons = ['📊 Market Analysis', '🚨 Crypto News', '💡 Trading Tips', '🎯 Ask AI'];
       }
     }
     
+    console.log(`🤖 AI Response: ${aiResponse.substring(0, 60)}...`);
+    console.log(`🔘 Buttons: ${buttons.join(', ')}`);
+    console.log(`💬 Show Input: ${showInput}`);
+    
     // Generate image with AI response
     const imageUrl = createImageUrl(aiResponse);
     
-    // Build button HTML
-    const buttonTags = buttons.map((btn, i) => 
-      `    <meta property="fc:frame:button:${i + 1}" content="${btn}" />`
-    ).join('\n');
+    // Build button meta tags - CAREFUL WITH QUOTES
+    const buttonTags = buttons.map((btn, i) => {
+      // Clean button text of problematic characters
+      const cleanBtn = btn.replace(/['"]/g, '');
+      return `    <meta property="fc:frame:button:${i + 1}" content="${cleanBtn}" />`;
+    }).join('\n');
     
-    // Add input field only for Ask AI mode
+    // Add input field ONLY for Ask AI mode - FIXED SYNTAX
     const inputTag = showInput ? 
-      '    <meta property="fc:frame:input:text" content="Ask about crypto trends, DeFi, trading strategies..." />' : '';
+      '    <meta property="fc:frame:input:text" content="Ask about crypto trends, DeFi, trading..." />' : '';
     
-    // Build complete frame response
+    // Build complete frame response - CLEAN HTML
     const responseHtml = `<!DOCTYPE html>
 <html>
 <head>
@@ -311,23 +303,30 @@ ${inputTag}
     <title>Kinetic Crypto AI Response</title>
 </head>
 <body>
-    <h1>⚡ Kinetic Crypto AI Response</h1>
-    <p><strong>Interaction:</strong> #${stats.interactions}</p>
-    <p><strong>CAPs Used:</strong> ${stats.apiCalls} | <strong>Saved:</strong> ${stats.cacheSaves}</p>
-    <p><strong>AI Response:</strong> ${aiResponse}</p>
+    <h1>Kinetic Crypto AI Response</h1>
+    <p>Interaction: ${stats.interactions}</p>
+    <p>Button: ${buttonIndex}</p>
+    <p>Show Input: ${showInput}</p>
+    <p>CAPs Used: ${stats.apiCalls}</p>
+    <p>Cache Saves: ${stats.cacheSaves}</p>
+    <p>Response: ${aiResponse.substring(0, 100)}...</p>
 </body>
 </html>`;
 
+    console.log('📏 Response HTML length:', responseHtml.length);
     console.log('✅ Sending frame response...');
     
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.status(200).send(responseHtml);
     
+    console.log('🎯 === FRAME INTERACTION END ===\n');
+    
   } catch (error) {
     console.error('❌ FRAME ERROR:', error);
+    console.error('Stack:', error.stack);
     
-    // Send error frame
+    // Send simple error frame
     const baseUrl = process.env.BASE_URL || 'https://kinetic-warpcast-ai.vercel.app';
     const errorHtml = `<!DOCTYPE html>
 <html>
@@ -335,14 +334,15 @@ ${inputTag}
     <meta charset="utf-8" />
     <meta property="fc:frame" content="vNext" />
     <meta property="fc:frame:image" content="${createImageUrl('Error occurred! Please try again.')}" />
-    <meta property="fc:frame:button:1" content="🔄 Try Again" />
-    <meta property="fc:frame:button:2" content="🏠 Main Menu" />
+    <meta property="fc:frame:button:1" content="Try Again" />
+    <meta property="fc:frame:button:2" content="Main Menu" />
     <meta property="fc:frame:post_url" content="${baseUrl}/api/frame" />
     <title>Frame Error</title>
 </head>
 <body>
     <h1>Frame Error</h1>
     <p>Error: ${error.message}</p>
+    <p>Please try again</p>
 </body>
 </html>`;
 
