@@ -1,14 +1,13 @@
 export default async function handler(req, res) {
-  if (req.method === 'GET') {
-    // Para teste manual no navegador
-    return res.status(200).send('<h1>✅ Frame endpoint ativo</h1>');
-  }
+  console.log('Frame request:', req.body);
 
-  if (req.method !== 'POST') {
+  const method = req.method;
+
+  if (method !== 'POST' && method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const data = req.body.untrustedData || req.body;
+  const data = req.body?.untrustedData || req.body || {};
   const buttonIndex = parseInt(data.buttonIndex) || 1;
 
   let aiResponse = "🤖 AI response here";
@@ -22,7 +21,7 @@ export default async function handler(req, res) {
           model: "gpt-4",
           messages: [
             {
-              role: "system", 
+              role: "system",
               content: "You are Kinetic Crypto AI. Respond in under 200 characters. Be helpful and professional."
             },
             {
@@ -42,28 +41,35 @@ export default async function handler(req, res) {
         {
           headers: {
             Authorization: `Bearer ${process.env.CRESTAL_API_KEY}`,
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json"
           }
         }
       );
 
       aiResponse = response.data.choices[0].message.content;
     } catch (error) {
-      console.error('Erro ao chamar a Crestal:', error?.response?.data || error.message);
       aiResponse = "🤖 AI temporarily unavailable. Try again!";
     }
   }
 
-  res.status(200).json({
-    image: `https://via.placeholder.com/1200x630/1a4f5f/ffffff?text=${encodeURIComponent(
-      aiResponse.substring(0, 80)
-    )}`,
-    postUrl: "https://kinetic-warpcast-ai.vercel.app/api/frame",
-    buttons: [
-      { label: "🔄 Refresh" },
-      { label: "💡 Tips" },
-      { label: "🎯 Ask AI" },
-      { label: "← Menu" }
-    ]
-  });
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta property="fc:frame" content="vNext">
+  <meta property="fc:frame:image" content="https://via.placeholder.com/1200x630/1a4f5f/ffffff?text=${encodeURIComponent(
+    aiResponse.substring(0, 80)
+  )}">
+  <meta property="fc:frame:button:1" content="🔄 Refresh">
+  <meta property="fc:frame:button:2" content="💡 Tips">
+  <meta property="fc:frame:button:3" content="🎯 Ask AI">
+  <meta property="fc:frame:button:4" content="← Menu">
+  <meta property="fc:frame:post_url" content="https://kinetic-warpcast-ai.vercel.app/api/frame">
+</head>
+<body>
+  <p>AI Response: ${aiResponse}</p>
+</body>
+</html>`;
+
+  res.setHeader("Content-Type", "text/html");
+  res.status(200).send(html);
 }
