@@ -22,7 +22,7 @@ export default async function handler(req, res) {
 
     // Se tem input text (pergunta do usuário)
     if (inputText) {
-      console.log('Processing user input');
+      console.log('Processing user input:', inputText);
       response = await callAI(`User asked: "${inputText}". Give helpful crypto advice.`);
       buttons = ['Ask Another', 'Market', 'Tips', 'Menu'];
     } else {
@@ -57,9 +57,12 @@ export default async function handler(req, res) {
     }
 
     // Criar imagem limpa
-    const imageText = response.replace(/[^\w\s]/g, '').substring(0, 80) || 'Kinetic Crypto AI';
-    const imageUrl = `https://fakeimg.pl/1200x630/1a4f5f/ffffff/?text=${encodeURIComponent(imageText)}`;
+    const imageText = response.replace(/[^\w\s]/g, '').substring(0, 60) || 'Kinetic Crypto AI';
+    const imageUrl = `https://via.placeholder.com/1200x630/1a4f5f/ffffff?text=${encodeURIComponent(imageText)}`;
 
+    console.log('AI Response received:', response);
+    console.log('Generated image URL:', imageUrl);
+    
     // Criar HTML do frame
     let html = `<!DOCTYPE html>
 <html>
@@ -100,7 +103,7 @@ export default async function handler(req, res) {
 <html>
 <head>
   <meta property="fc:frame" content="vNext">
-  <meta property="fc:frame:image" content="https://fakeimg.pl/1200x630/ff0000/ffffff/?text=Error">
+  <meta property="fc:frame:image" content="https://via.placeholder.com/1200x630/ff0000/ffffff?text=Error">
   <meta property="fc:frame:button:1" content="Try Again">
   <meta property="fc:frame:post_url" content="https://kinetic-warpcast-ai.vercel.app/api/frame">
 </head>
