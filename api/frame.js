@@ -78,7 +78,7 @@ export default async function handler(req, res) {
   }
 }
 
-// Função AI com fetch (sem axios)
+// Função AI com timeout curto
 async function callAI(question) {
   console.log('Calling AI with question:', question);
 
@@ -89,7 +89,11 @@ async function callAI(question) {
   }
 
   try {
-    console.log('Making Crestal API call with fetch...');
+    console.log('Making Crestal API call with 5s timeout...');
+    
+    // Controller para timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos
     
     const response = await fetch('https://open.service.crestal.network/v1/chat/completions', {
       method: 'POST',
@@ -102,18 +106,21 @@ async function callAI(question) {
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful crypto AI. Answer in 100 characters max. Include DYOR for trading advice.'
+            content: 'You are a helpful crypto AI. Answer in 80 characters max. Be concise. Include DYOR for trading.'
           },
           {
             role: 'user',
             content: question
           }
         ],
-        max_tokens: 50
-      })
+        max_tokens: 30, // Resposta mais curta = mais rápida
+        temperature: 0.7
+      }),
+      signal: controller.signal
     });
 
-    console.log('Response status:', response.status);
+    clearTimeout(timeoutId);
+    console.log('Response received, status:', response.status);
     
     if (!response.ok) {
       console.log('API response not ok:', response.status, response.statusText);
@@ -128,7 +135,7 @@ async function callAI(question) {
     }
 
     const data = await response.json();
-    console.log('Response data:', data);
+    console.log('AI response parsed successfully');
     
     const aiAnswer = data.choices[0].message.content;
     console.log('AI answered:', aiAnswer);
@@ -136,6 +143,12 @@ async function callAI(question) {
 
   } catch (error) {
     console.error('AI call failed:', error.message);
+    
+    if (error.name === 'AbortError') {
+      console.log('Request timed out after 5 seconds');
+      return 'AI taking too long. Try a simpler question!';
+    }
+    
     return 'AI temporarily down. Try again soon!';
   }
 }
