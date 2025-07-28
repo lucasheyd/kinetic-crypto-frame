@@ -78,7 +78,7 @@ export default async function handler(req, res) {
   }
 }
 
-// Função AI simplificada
+// Função AI com fetch (sem axios)
 async function callAI(question) {
   console.log('Calling AI with question:', question);
 
@@ -89,12 +89,15 @@ async function callAI(question) {
   }
 
   try {
-    console.log('Making Crestal API call...');
+    console.log('Making Crestal API call with fetch...');
     
-    const axios = require('axios');
-    const response = await axios.post(
-      'https://open.service.crestal.network/v1/chat/completions',
-      {
+    const response = await fetch('https://open.service.crestal.network/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.CRESTAL_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
         model: 'gpt-4',
         messages: [
           {
@@ -107,29 +110,32 @@ async function callAI(question) {
           }
         ],
         max_tokens: 50
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.CRESTAL_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
-      }
-    );
+      })
+    });
 
-    const aiAnswer = response.data.choices[0].message.content;
+    console.log('Response status:', response.status);
+    
+    if (!response.ok) {
+      console.log('API response not ok:', response.status, response.statusText);
+      
+      if (response.status === 401) {
+        return 'Invalid API key. Check your Crestal credentials!';
+      } else if (response.status === 429) {
+        return 'Rate limit reached. Try again in a moment!';
+      } else {
+        return `API error: ${response.status}. Try again!`;
+      }
+    }
+
+    const data = await response.json();
+    console.log('Response data:', data);
+    
+    const aiAnswer = data.choices[0].message.content;
     console.log('AI answered:', aiAnswer);
     return aiAnswer;
 
   } catch (error) {
     console.error('AI call failed:', error.message);
-    
-    if (error.response?.status === 401) {
-      return 'Invalid API key. Check your Crestal credentials!';
-    } else if (error.response?.status === 429) {
-      return 'Rate limit reached. Try again in a moment!';
-    } else {
-      return 'AI temporarily down. Try again soon!';
-    }
+    return 'AI temporarily down. Try again soon!';
   }
 }
