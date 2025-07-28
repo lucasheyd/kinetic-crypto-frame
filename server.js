@@ -1,35 +1,31 @@
-// server.js - Working Frame with Dynamic Images
+// server.js - Warpcast Compatible Frame
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Simple analytics
-let stats = {
-  interactions: 0,
-  uniqueUsers: new Set(),
-  questions: []
-};
+// Analytics
+let stats = { interactions: 0, users: new Set(), questions: [] };
 
-// Generate dynamic image URL (no files needed!)
-function generateImageUrl(text, bgColor = '1a1a2e', textColor = 'ffffff') {
-  const encodedText = encodeURIComponent(text.substring(0, 100));
-  return `https://via.placeholder.com/1200x630/${bgColor}/${textColor}?text=${encodedText}`;
+// Generate image URL
+function getImageUrl(text, bgColor = '1a1a2e') {
+  const baseUrl = process.env.BASE_URL || `https://kinetic-warpcast-ai.vercel.app`;
+  const encoded = encodeURIComponent(text.substring(0, 80));
+  return `https://via.placeholder.com/1200x630/${bgColor}/ffffff?text=${encoded}`;
 }
 
 // Call Crestal AI
-async function askCrestalAgent(prompt) {
+async function askAI(prompt) {
   if (!process.env.CRESTAL_API_KEY || process.env.CRESTAL_API_KEY === 'your_crestal_api_key_here') {
-    return "🤖 Kinetic Crypto AI is ready! (Add your Crestal API key to enable AI responses) ⚡";
+    return "🤖 Kinetic Crypto AI ready! Add Crestal API key to enable responses ⚡";
   }
 
   try {
-    console.log('🤖 Calling Crestal AI...');
-    
     const response = await axios.post(
       'https://open.service.crestal.network/v1/chat/completions',
       {
@@ -37,11 +33,11 @@ async function askCrestalAgent(prompt) {
         messages: [
           {
             role: "system",
-            content: "You are Kinetic Crypto, an expert crypto analyst. Respond in under 250 characters. Be professional and include 'DYOR' for trading advice. Use 1-2 emojis."
+            content: "You are Kinetic Crypto AI. Respond in under 200 characters. Be helpful and professional. Include 'DYOR' for trading advice."
           },
           { role: "user", content: prompt }
         ],
-        max_tokens: 150,
+        max_tokens: 100,
         temperature: 0.7
       },
       {
@@ -54,187 +50,251 @@ async function askCrestalAgent(prompt) {
 
     return response.data.choices[0].message.content;
   } catch (error) {
-    console.error('❌ Crestal error:', error.message);
-    return "🤖 AI analyst is taking a break. Try again soon! ⚡";
+    console.error('AI Error:', error.message);
+    return "🤖 AI temporarily unavailable. Try again! ⚡";
   }
 }
 
 // Main frame page
 app.get('/', (req, res) => {
-  const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
+  const baseUrl = process.env.BASE_URL || `https://kinetic-warpcast-ai.vercel.app`;
   
-  res.send(`<!DOCTYPE html>
-<html>
+  const html = `<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta property="fc:frame" content="vNext" />
-    <meta property="fc:frame:image" content="${generateImageUrl('⚡ Kinetic Crypto AI Analyst - Click buttons to interact!')}" />
-    <meta property="fc:frame:button:1" content="📊 Market Analysis" />
-    <meta property="fc:frame:button:2" content="🚨 Breaking News" />
-    <meta property="fc:frame:button:3" content="💡 Trading Tips" />
-    <meta property="fc:frame:button:4" content="🎯 Ask Question" />
-    <meta property="fc:frame:post_url" content="${baseUrl}/api/frame" />
-    <title>Kinetic Crypto Frame</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kinetic Crypto AI</title>
+    
+    <!-- Required Warpcast Frame meta tags -->
+    <meta property="fc:frame" content="vNext">
+    <meta property="fc:frame:image" content="${getImageUrl('⚡ Kinetic Crypto AI - Your Personal Crypto Analyst')}">
+    <meta property="fc:frame:image:aspect_ratio" content="1.91:1">
+    <meta property="fc:frame:button:1" content="📊 Market Analysis">
+    <meta property="fc:frame:button:2" content="🚨 Crypto News">
+    <meta property="fc:frame:button:3" content="💡 Trading Tips">
+    <meta property="fc:frame:button:4" content="🎯 Ask AI">
+    <meta property="fc:frame:post_url" content="${baseUrl}/frame">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Kinetic Crypto AI">
+    <meta property="og:description" content="AI-powered crypto analysis and insights">
+    <meta property="og:image" content="${getImageUrl('Kinetic Crypto AI')}">
+    
+    <style>
+        body { 
+            font-family: system-ui; 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background: #1a1a2e; 
+            color: white; 
+        }
+        .stats { 
+            background: rgba(255,255,255,0.1); 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin: 20px 0; 
+        }
+    </style>
 </head>
 <body>
-    <h1>⚡ Kinetic Crypto AI Analyst</h1>
-    <p>Interactive crypto insights powered by AI</p>
-    <p>📊 Stats: ${stats.interactions} interactions, ${stats.uniqueUsers.size} users</p>
-    <p>🔗 Frame URL: ${baseUrl}</p>
-    <p>🎯 Status: ${process.env.CRESTAL_API_KEY && process.env.CRESTAL_API_KEY !== 'your_crestal_api_key_here' ? '✅ AI Ready' : '⚠️ Add Crestal API Key'}</p>
+    <h1>⚡ Kinetic Crypto AI</h1>
+    <p>Interactive crypto analysis powered by AI</p>
+    
+    <div class="stats">
+        <h3>📊 Live Stats</h3>
+        <p>Interactions: ${stats.interactions}</p>
+        <p>Users: ${stats.users.size}</p>
+        <p>Questions: ${stats.questions.length}</p>
+    </div>
+    
+    <p>🔗 Frame URL: <code>${baseUrl}</code></p>
+    <p>🎯 Status: ${process.env.CRESTAL_API_KEY && process.env.CRESTAL_API_KEY !== 'your_crestal_api_key_here' ? '✅ AI Ready' : '⚠️ Add Crestal Key'}</p>
+    
+    <p><strong>How to use:</strong> Post this URL in Warpcast and interact with the buttons!</p>
 </body>
-</html>`);
+</html>`;
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
 });
 
-// Frame interaction handler
-app.post('/api/frame', async (req, res) => {
+// Frame interaction endpoint - CRITICAL: exact path /frame
+app.post('/frame', async (req, res) => {
   try {
-    console.log('📦 Frame interaction received:', JSON.stringify(req.body, null, 2));
+    console.log('📦 Frame request:', JSON.stringify(req.body, null, 2));
     
-    // Extract button data (different formats possible)
-    const frameData = req.body.untrustedData || req.body;
-    const buttonIndex = frameData.buttonIndex || frameData.button || 1;
-    const userFid = frameData.fid || 'anonymous';
-    const inputText = frameData.inputText || frameData.text;
+    // Parse Warpcast frame data
+    const data = req.body.untrustedData || req.body;
+    const buttonIndex = parseInt(data.buttonIndex) || 1;
+    const fid = data.fid || 'anon';
+    const inputText = data.inputText || '';
     
     // Update stats
     stats.interactions++;
-    stats.uniqueUsers.add(userFid);
+    stats.users.add(fid);
     
-    console.log(`🎯 Button ${buttonIndex} clicked by FID: ${userFid}`);
+    console.log(`🎯 Button ${buttonIndex} from FID ${fid}`);
     if (inputText) {
       console.log(`💬 Input: ${inputText}`);
-      stats.questions.push({ question: inputText, fid: userFid, time: new Date() });
+      stats.questions.push({ q: inputText, fid, time: new Date() });
     }
 
-    const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
-    let responseData;
+    const baseUrl = process.env.BASE_URL || `https://kinetic-warpcast-ai.vercel.app`;
+    let frameResponse;
 
-    // Handle different interactions
+    // Handle interactions
     if (inputText) {
-      // User asked a question
-      const answer = await askCrestalAgent(`User asked: "${inputText}". Provide a helpful crypto answer.`);
-      responseData = {
-        image: generateImageUrl(`Q: ${inputText.substring(0, 50)}... A: ${answer}`, '0f3460', 'ffffff'),
-        buttons: ['🎯 Ask Another', '📊 Market Analysis', '💡 Tips', '← Back']
+      // AI Question Response
+      const answer = await askAI(`User asked: "${inputText}". Provide helpful crypto advice.`);
+      frameResponse = {
+        image: getImageUrl(`Q: ${inputText.substring(0, 30)}... A: ${answer}`, '0d4f3c'),
+        buttons: [
+          { text: '🎯 Ask Again' },
+          { text: '📊 Market' },
+          { text: '💡 Tips' },
+          { text: '← Menu' }
+        ]
       };
     } else {
-      // Handle button clicks
-      switch (parseInt(buttonIndex)) {
+      // Button responses
+      switch (buttonIndex) {
         case 1: // Market Analysis
-          const analysis = await askCrestalAgent("Provide current crypto market analysis with key insights for today.");
-          responseData = {
-            image: generateImageUrl(`📊 Market Analysis: ${analysis}`, '1a5f4a', 'ffffff'),
-            buttons: ['🔄 Refresh', '🚨 News', '💡 Tips', '← Back']
+          const market = await askAI("Provide current crypto market analysis with key insights.");
+          frameResponse = {
+            image: getImageUrl(`📊 Market: ${market}`, '1a4f5f'),
+            buttons: [
+              { text: '🔄 Refresh' },
+              { text: '🚨 News' },
+              { text: '💡 Tips' },
+              { text: '← Menu' }
+            ]
           };
           break;
           
-        case 2: // Breaking News
-          const news = await askCrestalAgent("What are the top 2-3 crypto news developments today?");
-          responseData = {
-            image: generateImageUrl(`🚨 Breaking News: ${news}`, '5f1a1a', 'ffffff'),
-            buttons: ['📊 Impact', '🔄 Latest', '💡 Tips', '← Back']
+        case 2: // Crypto News  
+          const news = await askAI("What are the top 2 crypto news stories today?");
+          frameResponse = {
+            image: getImageUrl(`🚨 News: ${news}`, '5f1a1a'),
+            buttons: [
+              { text: '📊 Impact' },
+              { text: '🔄 Latest' },
+              { text: '💡 Tips' },
+              { text: '← Menu' }
+            ]
           };
           break;
           
         case 3: // Trading Tips
-          const tips = await askCrestalAgent("Provide 2-3 practical crypto trading tips with risk management.");
-          responseData = {
-            image: generateImageUrl(`💡 Trading Tips: ${tips}`, '4a1a5f', 'ffffff'),
-            buttons: ['📊 Analysis', '🎯 Ask Question', '🔄 More', '← Back']
+          const tips = await askAI("Give 2 practical crypto trading tips with risk management.");
+          frameResponse = {
+            image: getImageUrl(`💡 Tips: ${tips}`, '4a1a5f'),
+            buttons: [
+              { text: '📊 Analysis' },
+              { text: '🎯 Ask AI' },
+              { text: '🔄 More' },
+              { text: '← Menu' }
+            ]
           };
           break;
           
-        case 4: // Ask Question
-          responseData = {
-            image: generateImageUrl('🎯 Ask me anything about crypto! Type your question below.', '5f4a1a', 'ffffff'),
-            buttons: ['Submit Question'],
-            input: 'Ask about any crypto topic...'
+        case 4: // Ask AI
+          frameResponse = {
+            image: getImageUrl('🎯 Ask me anything about crypto! Type your question.', '5f4a1a'),
+            buttons: [{ text: 'Submit Question' }],
+            input: { text: 'Ask about crypto...' }
           };
           break;
           
-        default: // Back to main
-          responseData = {
-            image: generateImageUrl('⚡ Kinetic Crypto AI Analyst - Choose an option below!', '1a1a2e', 'ffffff'),
-            buttons: ['📊 Market Analysis', '🚨 Breaking News', '💡 Trading Tips', '🎯 Ask Question']
+        default: // Main menu
+          frameResponse = {
+            image: getImageUrl('⚡ Kinetic Crypto AI - Choose an option', '1a1a2e'),
+            buttons: [
+              { text: '📊 Market Analysis' },
+              { text: '🚨 Crypto News' },
+              { text: '💡 Trading Tips' },
+              { text: '🎯 Ask AI' }
+            ]
           };
       }
     }
 
-    // Generate frame response HTML
-    const buttons = responseData.buttons.map((btn, i) => 
-      `<meta property="fc:frame:button:${i + 1}" content="${btn}" />`
-    ).join('\n    ');
+    // Build frame HTML response - EXACT format required
+    const buttons = frameResponse.buttons.map((btn, i) => 
+      `    <meta property="fc:frame:button:${i + 1}" content="${btn.text || btn}" />`
+    ).join('\n');
     
-    const input = responseData.input ? 
-      `<meta property="fc:frame:input:text" content="${responseData.input}" />` : '';
+    const input = frameResponse.input ? 
+      `    <meta property="fc:frame:input:text" content="${frameResponse.input.text}" />` : '';
 
-    const frameHtml = `<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html>
 <head>
     <meta property="fc:frame" content="vNext" />
-    <meta property="fc:frame:image" content="${responseData.image}" />
-    <meta property="fc:frame:post_url" content="${baseUrl}/api/frame" />
-    ${buttons}
-    ${input}
-    <title>Kinetic Crypto Response</title>
+    <meta property="fc:frame:image" content="${frameResponse.image}" />
+    <meta property="fc:frame:post_url" content="${baseUrl}/frame" />
+${buttons}
+${input}
 </head>
 <body>
-    <h1>Kinetic Crypto AI Response</h1>
-    <p>Interaction processed successfully!</p>
+    <p>Frame response generated</p>
 </body>
 </html>`;
 
-    res.setHeader('Content-Type', 'text/html');
-    res.send(frameHtml);
+    // CRITICAL: Must return text/html
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.status(200).send(html);
 
   } catch (error) {
     console.error('❌ Frame error:', error);
     
+    // Error response
     const errorHtml = `<!DOCTYPE html>
 <html>
 <head>
     <meta property="fc:frame" content="vNext" />
-    <meta property="fc:frame:image" content="${generateImageUrl('❌ Error occurred. Try again!', 'ff0000', 'ffffff')}" />
-    <meta property="fc:frame:button:1" content="🔄 Try Again" />
-    <meta property="fc:frame:button:2" content="← Back to Menu" />
-    <meta property="fc:frame:post_url" content="${process.env.BASE_URL || `http://localhost:${PORT}`}/api/frame" />
+    <meta property="fc:frame:image" content="${getImageUrl('❌ Error occurred - Try again!', 'ff0000')}" />
+    <meta property="fc:frame:button:1" content="🔄 Retry" />
+    <meta property="fc:frame:button:2" content="← Menu" />
+    <meta property="fc:frame:post_url" content="${process.env.BASE_URL || 'https://kinetic-warpcast-ai.vercel.app'}/frame" />
 </head>
-<body><h1>Error</h1></body>
+<body><p>Error</p></body>
 </html>`;
 
-    res.setHeader('Content-Type', 'text/html');
-    res.send(errorHtml);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.status(200).send(errorHtml);
   }
 });
 
-// Analytics endpoint
-app.get('/analytics', (req, res) => {
-  res.json({
-    totalInteractions: stats.interactions,
-    uniqueUsers: stats.uniqueUsers.size,
-    questionsCount: stats.questions.length,
-    recentQuestions: stats.questions.slice(-5).map(q => ({
-      question: q.question,
-      time: q.time
-    }))
+// API endpoints
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    interactions: stats.interactions,
+    ai: !!(process.env.CRESTAL_API_KEY && process.env.CRESTAL_API_KEY !== 'your_crestal_api_key_here')
   });
 });
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
+app.get('/analytics', (req, res) => {
+  res.json({
     interactions: stats.interactions,
-    aiEnabled: !!(process.env.CRESTAL_API_KEY && process.env.CRESTAL_API_KEY !== 'your_crestal_api_key_here')
+    users: stats.users.size,
+    questions: stats.questions.length,
+    recent: stats.questions.slice(-3)
   });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Kinetic Crypto Frame running on port ${PORT}`);
-  console.log(`🌐 URL: ${process.env.BASE_URL || `http://localhost:${PORT}`}`);
-  console.log(`🤖 AI: ${process.env.CRESTAL_API_KEY && process.env.CRESTAL_API_KEY !== 'your_crestal_api_key_here' ? 'Enabled' : 'Add API key to enable'}`);
-  console.log('⚡ Ready for Warpcast interactions!');
+  console.log(`🚀 Kinetic Crypto AI Frame on port ${PORT}`);
+  console.log(`🌐 ${process.env.BASE_URL || `http://localhost:${PORT}`}`);
+  console.log(`🤖 AI: ${process.env.CRESTAL_API_KEY ? 'Ready' : 'Add key'}`);
 });
 
 module.exports = app;
