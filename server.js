@@ -161,5 +161,159 @@ app.get('/test-ai', async (req, res) => {
   }
 });
 
+// Frame interaction handler - ESSENCIAL para Warpcast
+app.post(’/api/frame’, async (req, res) => {
+try {
+console.log(‘🎯 Frame interaction received’);
+console.log(‘Body:’, JSON.stringify(req.body, null, 2));
+
+```
+// Parse frame data
+const frameData = req.body.untrustedData || req.body.trustedData || req.body;
+const buttonIndex = parseInt(frameData.buttonIndex) || 1;
+const fid = frameData.fid || 'user_' + Date.now();
+const inputText = (frameData.inputText || '').trim();
+
+// Update stats
+stats.interactions++;
+stats.users.add(fid);
+
+console.log(`Button: ${buttonIndex}, User: ${fid}, Input: "${inputText}"`);
+
+const baseUrl = process.env.BASE_URL || 'https://kinetic-warpcast-ai.vercel.app';
+let aiResponse = '';
+let buttons = [];
+let showInput = false;
+
+// Handle user input (when they ask a question)
+if (inputText && inputText.length > 0) {
+  console.log('📝 Processing user question');
+  stats.questions.push({ question: inputText, fid, timestamp: new Date() });
+  
+  aiResponse = await askCrestaAI(`User asked: "${inputText}". Provide helpful crypto analysis and advice.`);
+  buttons = ['🎯 Ask Another', '📊 Market Analysis', '💡 Trading Tips', '🏠 Main Menu'];
+  
+} else {
+  // Handle button clicks
+  console.log(`Processing button ${buttonIndex}`);
+  
+  switch (buttonIndex) {
+    case 1: // Market Analysis
+      console.log('📊 Market Analysis requested');
+      aiResponse = await askCrestaAI("Provide current crypto market analysis with key insights, Bitcoin and Ethereum prices, and market trends.");
+      buttons = ['🔄 Refresh Analysis', '🚨 Latest News', '💡 Trading Tips', '🏠 Main Menu'];
+      break;
+      
+    case 2: // Crypto News
+      console.log('🚨 Crypto News requested');
+      aiResponse = await askCrestaAI("What are today's most important crypto news stories? Include market impact and key developments.");
+      buttons = ['📊 Market Impact', '🔄 More News', '💡 Trading Tips', '🏠 Main Menu'];
+      break;
+      
+    case 3: // Trading Tips
+      console.log('💡 Trading Tips requested');
+      aiResponse = await askCrestaAI("Give practical crypto trading tips with risk management strategies. Include DYOR reminder and portfolio advice.");
+      buttons = ['📊 Market Analysis', '🎯 Ask AI Question', '🔄 More Tips', '🏠 Main Menu'];
+      break;
+      
+    case 4: // Ask AI
+      console.log('🎯 Ask AI mode activated');
+      aiResponse = "💬 Ask me anything about crypto! Type your question below and click Submit.";
+      buttons = ['📤 Submit Question'];
+      showInput = true;
+      break;
+      
+    default: // Main Menu
+      console.log('🏠 Main menu requested');
+      aiResponse = "⚡ Kinetic Crypto AI - Your crypto analysis assistant! Choose an option:";
+      buttons = ['📊 Market Analysis', '🚨 Crypto News', '💡 Trading Tips', '🎯 Ask AI'];
+  }
+}
+
+console.log('AI Response:', aiResponse.substring(0, 80) + '...');
+
+// Generate image with AI response
+const imageUrl = createImageUrl(aiResponse);
+
+// Build button HTML
+const buttonTags = buttons.map((btn, i) => 
+  `    <meta property="fc:frame:button:${i + 1}" content="${btn}" />`
+).join('\n');
+
+// Add input field only for Ask AI mode
+const inputTag = showInput ? 
+  '    <meta property="fc:frame:input:text" content="Ask about crypto trends, DeFi, trading strategies..." />' : '';
+
+// Build complete frame response
+const responseHtml = `<!DOCTYPE html>
+```
+
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta property="fc:frame" content="vNext" />
+    <meta property="fc:frame:image" content="${imageUrl}" />
+    <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
+    <meta property="fc:frame:post_url" content="${baseUrl}/api/frame" />
+${buttonTags}
+${inputTag}
+    <title>Kinetic Crypto AI Response</title>
+</head>
+<body>
+    <h1>⚡ Kinetic Crypto AI Response</h1>
+    <p><strong>Interaction:</strong> #${stats.interactions}</p>
+    <p><strong>User:</strong> ${fid}</p>
+    <p><strong>Button:</strong> ${buttonIndex}</p>
+    ${inputText ? `<p><strong>Question:</strong> "${inputText}"</p>` : ''}
+    <p><strong>AI Response:</strong> ${aiResponse}</p>
+
+```
+<hr>
+<p><em>Response generated successfully</em></p>
+```
+
+</body>
+</html>`;
+
+```
+console.log('✅ Sending frame response...');
+
+res.setHeader('Content-Type', 'text/html; charset=utf-8');
+res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+res.status(200).send(responseHtml);
+```
+
+} catch (error) {
+console.error(‘❌ FRAME ERROR:’, error);
+
+```
+// Send error frame
+const baseUrl = process.env.BASE_URL || 'https://kinetic-warpcast-ai.vercel.app';
+const errorHtml = `<!DOCTYPE html>
+```
+
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta property="fc:frame" content="vNext" />
+    <meta property="fc:frame:image" content="${createImageUrl('Error occurred! Please try again.')}" />
+    <meta property="fc:frame:button:1" content="🔄 Try Again" />
+    <meta property="fc:frame:button:2" content="🏠 Main Menu" />
+    <meta property="fc:frame:post_url" content="${baseUrl}/api/frame" />
+    <title>Frame Error</title>
+</head>
+<body>
+    <h1>Frame Error</h1>
+    <p>Error: ${error.message}</p>
+</body>
+</html>`;
+
+```
+res.setHeader('Content-Type', 'text/html; charset=utf-8');
+res.status(200).send(errorHtml);
+```
+
+}
+});
 // Export for Vercel
 module.exports = app;
