@@ -1,7 +1,15 @@
-// frame.js - Fixed Warpcast Frame Handler
+let frameStats = { interactions: 0, users: new Set(), questions: [] };
+
+// Simple cache system
+let cache = {
+  market: { data: null, timestamp: 0, duration: 15 * 60 * 1000 },
+  news: { data: null, timestamp: 0, duration: 30 * 60 * 1000 },  
+  tips: { data: null, timestamp: 0, duration: 60 * 60 * 1000 }
+};
+
 export default async function handler(req, res) {
   try {
-    console.log('Frame request received:', JSON.stringify(req.body, null, 2));
+    console.log('🎯 Frame request received:', JSON.stringify(req.body, null, 2));
 
     const method = req.method;
 
@@ -17,46 +25,61 @@ export default async function handler(req, res) {
 
     console.log(`Button: ${buttonIndex}, User: ${fid}, Input: "${inputText}"`);
 
-    let aiResponse = "AI response here";
+    // Update stats
+    frameStats.interactions++;
+    frameStats.users.add(fid);
+
+    let aiResponse = "";
     let buttons = [];
     let showInput = false;
 
     // Handle user input (Ask AI questions)
     if (inputText && inputText.length > 0) {
-      console.log('Processing user question');
+      console.log('📝 Processing user question');
+      frameStats.questions.push({ question: inputText, fid, timestamp: new Date() });
+      
       aiResponse = await getAIResponse(`User asked: "${inputText}". Provide helpful crypto analysis.`);
       buttons = ['Ask Another', 'Market Analysis', 'Trading Tips', 'Main Menu'];
       
     } else {
-      // Handle button clicks
+      // Handle button clicks with cache
       switch (buttonIndex) {
         case 1: // Market Analysis
-          console.log('Market Analysis requested');
-          aiResponse = await getAIResponse("Provide current crypto market analysis with Bitcoin and Ethereum prices and trends.");
+          console.log('📊 Market Analysis (with cache)');
+          aiResponse = await getCachedResponse(
+            'market',
+            "Provide current crypto market analysis with Bitcoin and Ethereum prices and trends."
+          );
           buttons = ['Refresh Analysis', 'Latest News', 'Trading Tips', 'Main Menu'];
           break;
           
         case 2: // Crypto News  
-          console.log('Crypto News requested');
-          aiResponse = await getAIResponse("What are todays most important crypto news stories? Include market impact.");
+          console.log('🚨 Crypto News (with cache)');
+          aiResponse = await getCachedResponse(
+            'news',
+            "What are todays most important crypto news stories? Include market impact."
+          );
           buttons = ['Market Impact', 'More News', 'Trading Tips', 'Main Menu'];
           break;
           
         case 3: // Trading Tips
-          console.log('Trading Tips requested');
-          aiResponse = await getAIResponse("Give practical crypto trading tips with risk management. Include DYOR reminder.");
+          console.log('💡 Trading Tips (with cache)');
+          aiResponse = await getCachedResponse(
+            'tips',
+            "Give practical crypto trading tips with risk management. Include DYOR reminder."
+          );
           buttons = ['Market Analysis', 'Ask AI Question', 'More Tips', 'Main Menu'];
           break;
           
         case 4: // Ask AI
-          console.log('Ask AI mode activated');
+          console.log('🎯 Ask AI mode activated');
           aiResponse = "Ask me anything about crypto! Type your question below and click Submit.";
           buttons = ['Submit Question'];
           showInput = true;
           break;
           
         default: // Main Menu
-          console.log('Main menu requested');
+          console.log('🏠 Main menu requested');
           aiResponse = "Kinetic Crypto AI - Your crypto analysis assistant! Choose an option:";
           buttons = ['Market Analysis', 'Crypto News', 'Trading Tips', 'Ask AI'];
       }
@@ -88,20 +111,22 @@ ${inputTag}
 </head>
 <body>
   <h1>Kinetic Crypto AI Response</h1>
+  <p>Interaction: ${frameStats.interactions}</p>
   <p>Button: ${buttonIndex}</p>
-  <p>Input: ${inputText}</p>
+  <p>Input: ${inputText || 'none'}</p>
+  <p>Show Input Field: ${showInput}</p>
   <p>AI Response: ${aiResponse}</p>
 </body>
 </html>`;
 
-    console.log('Sending frame response...');
+    console.log('✅ Sending frame response...');
     
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache");
     res.status(200).send(html);
 
   } catch (error) {
-    console.error('Frame error:', error);
+    console.error('❌ Frame error:', error);
     
     // Send error frame
     const errorHtml = `<!DOCTYPE html>
@@ -123,6 +148,30 @@ ${inputTag}
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.status(200).send(errorHtml);
   }
+}
+
+// Helper function to get cached response
+async function getCachedResponse(cacheKey, prompt) {
+  const now = Date.now();
+  const cached = cache[cacheKey];
+  
+  // Check if cache is valid
+  if (cached.data && (now - cached.timestamp) < cached.duration) {
+    console.log(`💰 Cache hit for ${cacheKey}! Saved CAP.`);
+    return cached.data + " (cached)";
+  }
+  
+  // Get fresh response and cache it
+  console.log(`💸 Cache miss for ${cacheKey}. Using CAP...`);
+  const response = await getAIResponse(prompt);
+  
+  cache[cacheKey] = {
+    data: response,
+    timestamp: now,
+    duration: cached.duration
+  };
+  
+  return response;
 }
 
 // Helper function to call Crestal AI
@@ -160,11 +209,11 @@ async function getAIResponse(prompt) {
     );
 
     const aiResponse = response.data.choices[0].message.content;
-    console.log('AI response received:', aiResponse.substring(0, 50) + '...');
+    console.log('✅ AI response received:', aiResponse.substring(0, 50) + '...');
     return aiResponse;
 
   } catch (error) {
-    console.error('Crestal AI error:', error.message);
+    console.error('❌ Crestal AI error:', error.message);
     return "AI temporarily unavailable. Market data coming soon! DYOR always.";
   }
 }
