@@ -1,0 +1,43 @@
+{
+  "name": "kinetic-crypto-frame",
+  "version": "1.0.0",
+  "description": "Interactive AI crypto analyst for Warpcast",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "deploy": "git push && echo 'Deployed to production!'"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "warpcast",
+    "frame",
+    "crypto",
+    "ai",
+    "farcaster",
+    "kinetic",
+    "crestal"
+  ],
+  "author": "FractalSwarm",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/kinetic-crypto-frame.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/your-username/kinetic-crypto-frame/issues"
+  },
+  "homepage": "https://github.com/your-username/kinetic-crypto-frame#readme"
+}
