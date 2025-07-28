@@ -1,4 +1,4 @@
-// api/frame.js - Versão Simples e Funcional
+// api/frame.js - Fixed Image Generation
 export default async function handler(req, res) {
   console.log('Frame handler called');
   console.log('Method:', req.method);
@@ -56,19 +56,39 @@ export default async function handler(req, res) {
       }
     }
 
-    // Criar imagem limpa
-    const imageText = response.replace(/[^\w\s]/g, '').substring(0, 60) || 'Kinetic Crypto AI';
-    const imageUrl = `https://via.placeholder.com/1200x630/1a4f5f/ffffff?text=${encodeURIComponent(imageText)}`;
-
     console.log('AI Response received:', response);
+
+    // SIMPLIFICAR: usar imagem fixa baseada no tipo de resposta
+    let imageUrl;
+    if (inputText) {
+      // Pergunta do usuário - imagem verde
+      imageUrl = `https://dummyimage.com/1200x630/28a745/ffffff&text=${encodeURIComponent('Q: ' + inputText.substring(0, 30) + '...')}`;
+    } else if (buttonIndex === 1) {
+      // Market - imagem azul
+      imageUrl = `https://dummyimage.com/1200x630/007bff/ffffff&text=${encodeURIComponent('Market Analysis')}`;
+    } else if (buttonIndex === 2) {
+      // News - imagem vermelha
+      imageUrl = `https://dummyimage.com/1200x630/dc3545/ffffff&text=${encodeURIComponent('Crypto News')}`;
+    } else if (buttonIndex === 3) {
+      // Tips - imagem laranja
+      imageUrl = `https://dummyimage.com/1200x630/fd7e14/ffffff&text=${encodeURIComponent('Trading Tips')}`;
+    } else if (buttonIndex === 4) {
+      // Ask AI - imagem roxa
+      imageUrl = `https://dummyimage.com/1200x630/6f42c1/ffffff&text=${encodeURIComponent('Ask AI Anything')}`;
+    } else {
+      // Menu principal - imagem padrão
+      imageUrl = `https://dummyimage.com/1200x630/1a4f5f/ffffff&text=${encodeURIComponent('Kinetic Crypto AI')}`;
+    }
+
     console.log('Generated image URL:', imageUrl);
-    
+
     // Criar HTML do frame
     let html = `<!DOCTYPE html>
 <html>
 <head>
   <meta property="fc:frame" content="vNext">
   <meta property="fc:frame:image" content="${imageUrl}">
+  <meta property="fc:frame:image:aspect_ratio" content="1.91:1">
   <meta property="fc:frame:post_url" content="https://kinetic-warpcast-ai.vercel.app/api/frame">`;
 
     // Adicionar botões
@@ -82,18 +102,23 @@ export default async function handler(req, res) {
     }
 
     html += `
+  <title>Kinetic Crypto AI</title>
 </head>
 <body>
-  <h1>Kinetic Crypto AI</h1>
-  <p>Button: ${buttonIndex}</p>
-  <p>Input: ${inputText || 'none'}</p>
-  <p>Has Input Field: ${hasInput}</p>
-  <p>Response: ${response}</p>
+  <h1>🤖 Kinetic Crypto AI Response</h1>
+  <p><strong>Button Clicked:</strong> ${buttonIndex}</p>
+  <p><strong>User Input:</strong> ${inputText || 'none'}</p>
+  <p><strong>Has Input Field:</strong> ${hasInput}</p>
+  <p><strong>AI Response:</strong> ${response}</p>
+  <p><strong>Image URL:</strong> ${imageUrl}</p>
+  
+  <hr>
+  <p><em>This is your mini app working! The AI response shows as an image in the frame.</em></p>
 </body>
 </html>`;
 
     console.log('Sending HTML response');
-    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.status(200).send(html);
 
   } catch (error) {
@@ -103,7 +128,7 @@ export default async function handler(req, res) {
 <html>
 <head>
   <meta property="fc:frame" content="vNext">
-  <meta property="fc:frame:image" content="https://via.placeholder.com/1200x630/ff0000/ffffff?text=Error">
+  <meta property="fc:frame:image" content="https://dummyimage.com/1200x630/ff0000/ffffff&text=Error+Occurred">
   <meta property="fc:frame:button:1" content="Try Again">
   <meta property="fc:frame:post_url" content="https://kinetic-warpcast-ai.vercel.app/api/frame">
 </head>
@@ -113,7 +138,7 @@ export default async function handler(req, res) {
 </body>
 </html>`;
 
-    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.status(200).send(errorHtml);
   }
 }
@@ -148,7 +173,9 @@ async function callAI(prompt) {
       }
     );
 
-    return response.data.choices[0].message.content;
+    const result = response.data.choices[0].message.content;
+    console.log('Crestal AI responded:', result);
+    return result;
   } catch (error) {
     console.error('AI Error:', error.message);
     return 'AI temporarily down. Market looking good! DYOR always.';
