@@ -1,14 +1,14 @@
 export default async function handler(req, res) {
-  console.log('Frame request:', req.body);
-
   if (req.method === 'GET') {
-    // Para testar no navegador
+    // ✅ Teste de resposta simples no navegador
     return res.status(200).send("<h1>Kinetic AI Frame is online</h1>");
   }
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  console.log('Frame request:', req.body);
 
   const data = req.body.untrustedData || req.body;
   const buttonIndex = parseInt(data.buttonIndex) || 1;
