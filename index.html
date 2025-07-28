@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinetic Crypto - AI Crypto Analyst</title>
+    
+    <!-- Warpcast Frame Meta Tags -->
+    <meta property="fc:frame" content="vNext" />
+    <meta property="fc:frame:image" content="https://your-domain.com/images/frame-main.png" />
+    <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
+    <meta property="fc:frame:button:1" content="📊 Market Analysis" />
+    <meta property="fc:frame:button:2" content="🚨 Breaking News" />
+    <meta property="fc:frame:button:3" content="💡 Trading Tips" />
+    <meta property="fc:frame:button:4" content="🎯 Ask Question" />
+    <meta property="fc:frame:post_url" content="https://your-domain.com/api/frame" />
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Kinetic Crypto - AI Crypto Analyst" />
+    <meta property="og:description" content="Get personalized crypto insights powered by AI" />
+    <meta property="og:image" content="https://your-domain.com/images/frame-main.png" />
+    
+    <style>
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            max-width: 600px;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #00d4ff, #ff0080);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-bottom: 2rem;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .feature {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .feature:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.2rem;
+        }
+        
+        .feature p {
+            margin: 0;
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+        
+        .stats {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .stats h3 {
+            margin-top: 0;
+            color: #00d4ff;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            text-align: center;
+        }
+        
+        .stat-item {
+            padding: 0.5rem;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff0080;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+        
+        .cta {
+            background: linear-gradient(45deg, #00d4ff, #ff0080);
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 2rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 212, 255, 0.3);
+        }
+        
+        .powered-by {
+            margin-top: 2rem;
+            opacity: 0.6;
+            font-size: 0.9rem;
+        }
+        
+        .demo-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .demo-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .demo-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .status {
+            background: linear-gradient(45deg, rgba(0, 212, 255, 0.2), rgba(255, 0, 128, 0.2));
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-left: 4px solid #00d4ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">⚡</div>
+        <h1 class="title">Kinetic Crypto</h1>
+        <p class="subtitle">AI-Powered Crypto Analysis in Warpcast</p>
+        
+        <div class="status">
+            <strong>🟢 Status: Live & Ready</strong><br>
+            AI-powered crypto analyst ready for Warpcast interactions!
+        </div>
+        
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">📊</div>
+                <h3>Market Analysis</h3>
+                <p>Real-time crypto insights powered by GPT-4 and live market data</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">🚨</div>
+                <h3>Breaking News</h3>
+                <p>AI-detected market movements and latest crypto developments</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">💡</div>
+                <h3>Trading Tips</h3>
+                <p>Personalized insights with risk assessment and DYOR reminders</p>
+            </div>
+            
+            <div class="feature">
+                <div class="feature-icon">🎯</div>
+                <h3>Ask Anything</h3>
+                <p>Direct Q&A with our AI crypto analyst - ask about any topic</p>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <h3>📊 Live Frame Stats</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number" id="interactions">-</div>
+                    <div class="stat-label">Interactions</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="users">-</div>
+                    <div class="stat-label">Unique Users</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="questions">-</div>
+                    <div class="stat-label">Questions</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-buttons">
+            <button class="demo-button" onclick="testFrame('market')">
+                📊 Test Market Analysis
+            </button>
+            <button class="demo-button" onclick="testFrame('news')">
+                🚨 Test Breaking News
+            </button>
+            <button class="demo-button" onclick="testFrame('tips')">
+                💡 Test Trading Tips
+            </button>
+            <button class="demo-button" onclick="testFrame('question')">
+                🎯 Test Q&A Mode
+            </button>
+        </div>
+        
+        <a href="https://warpcast.com/~/composer?text=Check%20out%20Kinetic%20Crypto%20AI%20analyst!&embeds[]=https://your-domain.com" class="cta" id="warpcast-link">
+            🚀 Launch in Warpcast
+        </a>
+        
+        <div class="powered-by">
+            Powered by FractalSwarm Technology<br>
+            <small>Interactive AI Crypto Analysis Framework</small>
+        </div>
+    </div>
+    
+    <script>
+        // Update URLs when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentDomain = window.location.origin;
+            
+            // Update frame meta tags
+            document.querySelector('meta[property="fc:frame:image"]').content = currentDomain + '/images/frame-main.png';
+            document.querySelector('meta[property="fc:frame:post_url"]').content = currentDomain + '/api/frame';
+            document.querySelector('meta[property="og:image"]').content = currentDomain + '/images/frame-main.png';
+            
+            // Update Warpcast link
+            const warpcastLink = document.getElementById('warpcast-link');
+            warpcastLink.href = `https://warpcast.com/~/composer?text=Check%20out%20Kinetic%20Crypto%20AI%20analyst!&embeds[]=${encodeURIComponent(currentDomain)}`;
+            
+            // Load stats
+            loadStats();
+        });
+        
+        // Load live stats
+        async function loadStats() {
+            try {
+                const response = await fetch('/analytics');
+                const data = await response.json();
+                
+                document.getElementById('interactions').textContent = data.totalInteractions || 0;
+                document.getElementById('users').textContent = data.uniqueUsers || 0;
+                document.getElementById('questions').textContent = data.questionsCount || 0;
+            } catch (error) {
+                console.log('Stats not available yet');
+            }
+        }
+        
+        // Test frame interactions
+        function testFrame(type) {
+            alert(`Testing ${type} interaction...\n\nIn a real Warpcast frame, this would trigger the AI analysis for ${type}.`);
+        }
+        
+        // Refresh stats every 30 seconds
+        setInterval(loadStats, 30000);
+    </script>
+</body>
+</html>
