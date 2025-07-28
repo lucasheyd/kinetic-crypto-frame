@@ -27,8 +27,16 @@ export default async function handler(req, res) {
       hasInput = true;
     }
 
-    // Imagem fixa simples
-    const imageUrl = 'https://dummyimage.com/1200x630/6f42c1/ffffff&text=Kinetic+Crypto+AI+Chat';
+    // Criar imagem dinâmica com a resposta
+    let imageUrl;
+    if (inputText) {
+      // Mostrar pergunta e resposta na imagem
+      const imageText = `Q: ${inputText.substring(0, 30)}... A: ${response.substring(0, 50)}...`;
+      imageUrl = `https://dummyimage.com/1200x630/28a745/ffffff&text=${encodeURIComponent(imageText)}`;
+    } else {
+      // Estado inicial
+      imageUrl = 'https://dummyimage.com/1200x630/6f42c1/ffffff&text=Ask+me+anything+about+crypto!';
+    }
 
     // HTML super simples
     let html = `<!DOCTYPE html>
@@ -102,19 +110,19 @@ async function callAI(question) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini', // Modelo mais barato e rápido da Crestal
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful crypto AI. Answer in 80 characters max. Be concise. Include DYOR for trading.'
+            content: 'You are Kinetic Crypto AI. Answer in 50 characters max. Be direct. Add DYOR for trading.'
           },
           {
             role: 'user',
             content: question
           }
         ],
-        max_tokens: 30, // Resposta mais curta = mais rápida
-        temperature: 0.7
+        max_tokens: 15, // Bem curto para economizar
+        temperature: 0.3
       }),
       signal: controller.signal
     });
